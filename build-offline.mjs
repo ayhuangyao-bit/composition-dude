@@ -1,0 +1,22 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+
+const project = fileURLToPath(new URL('..', import.meta.url));
+const root = path.join(project, 'desktop/ui');
+const index = await fs.readFile(path.join(root, 'index.html'), 'utf8');
+const scripts = [...index.matchAll(/<script\b[^>]*\bsrc="([^"]+)"[^>]*><\/script>/g)];
+const styles = [...index.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g)];
+if (scripts.length !== 1 || styles.length !== 1) throw new Error('Expected one bundled script and stylesheet');
+const asset = url => path.join(root, url.replace(/^\.\//, ''));
+const js = `window.compositionDude={version:"1.0.0"};\n${await fs.readFile(asset(scripts[0][1]), 'utf8')}`;
+const css = await fs.readFile(asset(styles[0][1]), 'utf8');
+if (/<\/script/i.test(js) || /<\/style/i.test(css)) throw new Error('Unexpected inline terminator');
+if (/\b(?:import|export)\s*\{/m.test(js) || /\bimport\(/.test(js)) throw new Error('Offline build must not load chunks');
+const hash = createHash('sha256').update(js).digest('base64');
+const icon = Buffer.from(await fs.readFile(path.join(project, 'public/favicon.svg'))).toString('base64');
+const html = `<!doctype html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><link rel="icon" href="data:image/svg+xml;base64,${icon}"><title>Composition Dude · 离线版</title><style>${css}</style></head><body><div id="root"></div><script>${js}</script></body></html>\n`;
+const out = path.join(project, 'Composition-Dude-offline.html');
+await fs.writeFile(out, html);
+console.log(`Created ${path.basename(out)} (${Buffer.byteLength(html)} bytes)`);

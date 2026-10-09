@@ -1,0 +1,50 @@
+name: Build Desktop
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: read
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: Windows
+            command: package:windows
+          - os: macos-latest
+            platform: macOS
+            command: package:mac
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Install UI dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check TypeScript
+        run: npm run typecheck
+      - name: Build offline UI
+        run: npm run desktop:ui
+      - name: Install desktop dependencies
+        run: npm ci --prefix desktop --no-audit --no-fund
+      - name: Package desktop software
+        run: npm run ${{ matrix.command }} --prefix desktop
+      - name: Upload downloadable packages
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: Composition-Dude-${{ matrix.platform }}
+          path: |
+            desktop/release/*.exe
+            desktop/release/*.dmg
+            desktop/release/*.zip
+          if-no-files-found: error
+          retention-days: 30

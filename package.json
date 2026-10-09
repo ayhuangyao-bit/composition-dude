@@ -1,0 +1,26 @@
+{
+  "name": "composition-dude-desktop",
+  "productName": "Composition Dude",
+  "version": "1.0.0",
+  "description": "Offline product composition workbench",
+  "author": "Composition Dude contributors",
+  "license": "MIT",
+  "main": "main.cjs",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "package:windows": "electron-builder --win --x64 --publish never",
+    "package:mac": "electron-builder --mac --x64 --arm64 --publish never"
+  },
+  "devDependencies": { "electron": "44.7.0", "electron-builder": "26.17.0" },
+  "build": {
+    "appId": "io.compositiondude.desktop",
+    "productName": "Composition Dude",
+    "directories": { "output": "release" },
+    "files": ["main.cjs", "preload.cjs", "ui/**/*", "icons/**/*", "package.json"],
+    "asar": true,
+    "win": { "target": ["nsis", "portable"], "icon": "icons/icon.ico", "artifactName": "Composition-Dude-${version}-Windows-${arch}-${target}.${ext}" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true },
+    "mac": { "target": ["dmg", "zip"], "category": "public.app-category.graphics-design", "icon": "icons/icon.icns", "identity": null, "artifactName": "Composition-Dude-${version}-macOS-${arch}.${ext}" }
+  }
+}
